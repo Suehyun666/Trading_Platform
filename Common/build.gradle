@@ -1,0 +1,12 @@
+version '1.0'
+
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("io.netty:netty-buffer:4.1.100.Final")
+    testImplementation 'junit:junit:4.13.2'
+}
