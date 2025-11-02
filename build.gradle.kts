@@ -1,6 +1,7 @@
 plugins {
     java
     id("com.google.protobuf") version "0.9.4" apply false
+    id("io.quarkus") version "3.27.0" apply false
 }
 
 allprojects {
