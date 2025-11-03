@@ -1,0 +1,26 @@
+🚀 단일 시나리오 테스트 시작: Reserve 기능 예외 검증
+
+--- 💰 FR-01: 예수금 부족 ---
+  상태: ✅ PASS
+  응답 코드: INSUFFICIENT_FUNDS (예상: INSUFFICIENT_FUNDS)
+  소요 시간: 427 ms
+
+--- 🧮 FR-01: 음수 금액 요청 ---
+  상태: ✅ PASS
+  응답 코드: INVALID_REQUEST (예상: INVALID_REQUEST)
+  소요 시간: 3 ms
+
+--- ❌ FR-00: 존재하지 않는 계좌 ---
+  상태: ✅ PASS
+  응답 코드: ACCOUNT_NOT_FOUND (예상: ACCOUNT_NOT_FOUND)
+  소요 시간: 8 ms
+
+--- 중복 RequestId (1차 성공) ---
+
+--- 🔁 중복 RequestId (2차 시도) ---
+  상태: ✅ PASS
+  응답 코드: DUPLICATE_REQUEST (예상: DUPLICATE_REQUEST)
+  소요 시간: 3 ms
+
+🎉 단일 시나리오 테스트 완료
+

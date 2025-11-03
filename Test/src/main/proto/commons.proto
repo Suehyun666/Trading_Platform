@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package commons;
+
+option java_multiple_files = true;
+option java_package = "com.hts.generated.grpc";
+option java_outer_classname = "Commons";
+
+message SecureSession {
+  uint64 session_id = 1;
+}
+
+message ErrorMessage {
+  int32 code = 1;
+  string message = 2;
+}

@@ -121,6 +121,14 @@ cmake-build-*/
 
 # IntelliJ
 out/
+.idea/modules.xml
+.idea/*.iml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/shelf/
+.idea
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/
