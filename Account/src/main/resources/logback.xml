@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Async Appender: non-blocking, minimal overhead -->
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="CONSOLE" />
+    </appender>
+
+    <!-- Async Appender: non-blocking, minimal overhead -->
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE"/>
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <!-- Package-specific loggers -->
+    <logger name="io.lettuce" level="WARN" />
+    <logger name="org.jooq" level="WARN" />
+    <logger name="com.zaxxer.hikari" level="WARN" />
+
+    <!-- Application loggers: INFO only (1 line per request) -->
+
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="ASYNC" />
+    </root>
+</configuration>

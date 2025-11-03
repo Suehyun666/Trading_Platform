@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package events;
+
+option java_multiple_files = true;
+option java_package = "com.hts.generated.events";
+option java_outer_classname = "EventsProto";
+
+// 체결 이벤트 (Matching Engine → Account)
+// Kafka Topic: trading.fills
+message FillEvent {
+  string event_id = 1;        // 멱등성 키 (UUID)
+  int64 account_id = 2;       // Partition Key로 사용 → 같은 계좌는 순서 보장
+  string order_id = 3;        // 원본 주문 ID
+  string symbol = 4;          // AAPL, TSLA, etc.
+  string side = 5;            // BUY, SELL
+  string fill_price = 6;      // BigDecimal 문자열 "150.00"
+  string quantity = 7;        // BigDecimal 문자열 "10"
+  string filled_amount = 8;   // price * qty = "1500.00"
+  int64 timestamp = 9;        // Unix epoch milliseconds
+}
+
+// 입금 이벤트 (Payment → Account)
+// Kafka Topic: payment.deposits
+message DepositEvent {
+  string event_id = 1;        // 멱등성 키
+  int64 account_id = 2;       // Partition Key
+  string amount = 3;          // "1000.00"
+  string currency = 4;        // USD, KRW
+  string source = 5;          // BANK_TRANSFER, WIRE
+  int64 timestamp = 6;
+}
+
+// 출금 이벤트 (Payment → Account)
+// Kafka Topic: payment.withdrawals
+message WithdrawEvent {
+  string event_id = 1;
+  int64 account_id = 2;       // Partition Key
+  string amount = 3;
+  string currency = 4;
+  string destination = 5;     // BANK_ACCOUNT
+  int64 timestamp = 6;
+}

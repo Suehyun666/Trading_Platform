@@ -1,0 +1,215 @@
+좋습니다! 병목 지점들을 파악했습니다. 실용적인 개선 방안들을
+  제시하겠습니다.
+
+  🎯 레이턴시 개선 방안
+
+  1️⃣ 즉시 적용 가능 (코드 변경 없음)
+
+  A. PostgreSQL 설정 최적화
+
+  # postgresql.conf 수정
+  sudo nano /etc/postgresql/*/main/postgresql.conf
+
+  # 현재 설정 확인 및 개선
+  shared_buffers = 2GB              # 1GB → 2GB (RAM의 25%)
+  effective_cache_size = 6GB        # 4GB → 6GB (RAM의 75%)
+  work_mem = 8MB                    # 4MB → 8MB (정렬/해시 작업)
+  maintenance_work_mem = 512MB      # 유지보수 작업
+  random_page_cost = 1.1            # SSD 최적화 (기본 4.0)
+
+  # 체크포인트 최적화
+  checkpoint_completion_target = 0.9
+  wal_buffers = 16MB
+
+  예상 개선: P50 150ms → 130ms (15% 개선)
+
+  ---
+  2️⃣ 쉬운 코드 변경
+
+  🚀 레이턴시 개선 방안 (우선순위별)
+
+  ---
+  ⚡ 레벨 1: 즉시 적용 (코드 변경 없음, 5-20% 개선)
+
+  1. PostgreSQL 튜닝
+
+  -- 현재 설정 확인
+  SHOW shared_buffers;
+  SHOW effective_cache_size;
+  SHOW work_mem;
+
+  최적화 스크립트 생성:
+
+  cat > /tmp/pg_tune.sql <<'EOF'
+  -- Connection Pool과 매칭
+  ALTER SYSTEM SET max_connections = 512;
+
+  -- 메모리 설정 (8GB RAM 기준)
+  ALTER SYSTEM SET shared_buffers = '2GB';
+  ALTER SYSTEM SET effective_cache_size = '6GB';
+  ALTER SYSTEM SET work_mem = '8MB';
+  ALTER SYSTEM SET maintenance_work_mem = '512MB';
+
+  -- SSD 최적화
+  ALTER SYSTEM SET random_page_cost = 1.1;
+  ALTER SYSTEM SET effective_io_concurrency = 200;
+
+  -- WAL 최적화
+  ALTER SYSTEM SET wal_buffers = '16MB';
+  ALTER SYSTEM SET checkpoint_completion_target = 0.9;
+  ALTER SYSTEM SET wal_compression = on;
+
+  -- Query 최적화
+  ALTER SYSTEM SET default_statistics_target = 100;
+
+  SELECT pg_reload_conf();
+  EOF
+
+  sudo -u postgres psql -f /tmp/pg_tune.sql
+
+  예상 개선: 15-20% (P50: 150ms → 120-130ms)
+
+  ---
+  2. Kafka Producer 설정 최적화
+
+  application.properties에 추가:
+
+  # 현재
+  mp.messaging.outgoing.account-events.linger.ms=10
+
+  # 개선 (완전 비동기)
+  mp.messaging.outgoing.account-events.linger.ms=0
+  mp.messaging.outgoing.account-events.acks=0  # acks=1 → 0 (응답 대기 안 
+  함)
+  mp.messaging.outgoing.account-events.buffer.memory=67108864
+  mp.messaging.outgoing.account-events.retries=0
+
+  예상 개선: 5-10% (Kafka 대기 시간 제거)
+
+  ---
+  ⚡⚡ 레벨 2: 작은 코드 변경 (20-30% 개선)
+
+  3. account_reserves 테이블 업데이트 제거
+
+  현재 문제:
+  // AccountJOOQRepository.java:195-207
+  dsl.batch(
+      dsl.query("UPDATE request_history ..."),
+      dsl.query("UPDATE account_reserves ...")  // ⬅️ 이게 필요한가?
+  ).execute();
+
+  account_reserves는 조회용일 뿐, 핵심 로직에 불필요합니다!
+
+  제거 옵션:
+  1. 완전 제거 - 성능 우선
+  2. 비동기 업데이트 - Kafka 컨슈머가 처리
+  3. 배치 처리 - 1분마다 한 번씩
+
+  예상 개선: 15-20% (DB 쓰기 50% 감소)
+
+  ---
+  4. request_history 최적화
+
+  현재는 모든 요청을 기록하는데, 성공한 요청만 기록하도록 변경:
+
+  // 실패는 로그로만, 성공만 DB에 기록
+  if (updated == 1) {
+      // 성공 시에만 request_history INSERT
+  } else {
+      // 실패는 로그만
+      log.warn("Reserve failed: accountId={}, amount={}", accountId,
+  amount);
+  }
+
+  예상 개선: 10-15% (에러 케이스 DB 쓰기 제거)
+
+  ---
+  ⚡⚡⚡ 레벨 3: 중간 코드 변경 (30-50% 개선)
+
+  5. 멱등성 체크 최적화 - Redis 캐시
+
+  현재:
+  INSERT INTO request_history ... ON CONFLICT DO NOTHING
+
+  개선:
+  // Redis에 먼저 체크 (1ms 이내)
+  if (redis.exists("req:" + requestId)) {
+      return OperationStatus.DUPLICATE;
+  }
+
+  // DB에 INSERT
+  int inserted = dsl.execute(...);
+
+  // Redis에 캐시 (TTL 1시간)
+  redis.setex("req:" + requestId, 3600, "1");
+
+  예상 개선: 20-30% (중복 요청 즉시 거부)
+
+  ---
+  6. Batch 처리 개선
+
+  현재:
+  dsl.batch(
+      dsl.query("UPDATE request_history..."),
+      dsl.query("UPDATE account_reserves...")
+  ).execute();
+
+  개선:
+  -- 단일 쿼리로 통합
+  WITH updated_history AS (
+      UPDATE request_history SET status='SUCCESS' WHERE request_id=?
+  RETURNING 1
+  )
+  UPDATE account_reserves SET status='RELEASED' WHERE request_id=?;
+
+  예상 개선: 10-15%
+
+  ---
+  ⚡⚡⚡⚡ 레벨 4: 아키텍처 변경 (50-70% 개선)
+
+  7. 읽기 전용 레플리카
+
+          Write Master (INSERT/UPDATE)
+                ↓
+          Read Replica (SELECT)
+
+  모든 조회는 레플리카에서 → Write 부하 감소
+
+  예상 개선: 30-40%
+
+  ---
+  8. Connection Pool per Shard
+
+  현재:
+  128 Shards → 256 Connection Pool (공유)
+
+  개선:
+  각 Shard마다 독립적인 Connection Pool
+
+  예상 개선: 20-30%
+
+  ---
+  📊 추천 조합
+
+  🥇 빠른 승리 (1시간 작업)
+
+  레벨 1 + 레벨 2-3 적용
+  - PostgreSQL 튜닝
+  - account_reserves 업데이트 제거
+  - 예상: P50 150ms → 100ms (33% 개선)
+
+  🥈 균형잡힌 접근 (1일 작업)
+
+  레벨 1 + 레벨 2 전체
+  - 예상: P50 150ms → 80-90ms (40-50% 개선)
+
+  🥉 공격적 최적화 (1주 작업)
+
+  레벨 1 + 레벨 2 + 레벨 3 전체
+  - 예상: P50 150ms → 50-60ms (60-70% 개선)
+
+  ---
+  어떤 레벨부터 시작하시겠어요? 제일 효과 큰 account_reserves 제거부터
+  해볼까요?
+
+

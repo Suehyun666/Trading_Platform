@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'io.quarkus'
+}
+
+group = 'com.hts.account'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    //gRPC
+    implementation 'io.quarkus:quarkus-grpc'
+
+    //Database
+    implementation 'io.quarkiverse.jooq:quarkus-jooq:2.1.0'
+    implementation 'io.quarkus:quarkus-flyway'
+    implementation 'io.quarkus:quarkus-jdbc-mysql'
+    implementation 'io.quarkus:quarkus-jdbc-postgresql'
+
+    //Kafka Messaging
+    implementation 'io.quarkus:quarkus-kafka-client'
+    implementation 'io.quarkus:quarkus-messaging-kafka'
+    //implementation 'io.quarkus:quarkus-kafka-streams'
+
+    //Redis
+    implementation 'io.quarkus:quarkus-redis-cache'
+    implementation 'io.quarkus:quarkus-redis-client'
+
+    // Monitoring
+    implementation 'io.quarkus:quarkus-micrometer'
+    implementation 'io.quarkus:quarkus-micrometer-registry-prometheus'
+
+    //Circuit Breaker & Fault Tolerance (Phase 3)
+    implementation 'io.quarkus:quarkus-smallrye-fault-tolerance'
+
+    //Core
+    implementation 'io.quarkus:quarkus-arc'
+    //test
+    testImplementation 'io.quarkus:quarkus-junit5'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+test {
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+    jvmArgs "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}

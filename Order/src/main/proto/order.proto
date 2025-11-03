@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+import "commons.proto";
+
+option java_package = "com.hts.order.proto";
+option java_outer_classname = "OrderProto";
+
+// 주문 타입
+enum OrderType {
+  MARKET = 0;
+  LIMIT = 1;
+}
+
+// 주문 방향
+enum Side {
+  BUY = 0;
+  SELL = 1;
+}
+
+// 주문 유효기간
+enum TimeInForce {
+  DAY = 0;
+  GTC = 1;  // Good Till Cancel
+  IOC = 2;  // Immediate or Cancel
+  FOK = 3;  // Fill or Kill
+}
+
+// 주문 상태
+enum OrderStatus {
+  RECEIVED = 0;        // 접수됨
+  ACCEPTED = 1;        // 승인됨
+  SENT = 2;            // 게이트웨이로 전송됨
+  PARTIALLY_FILLED = 3; // 부분 체결
+  FILLED = 4;          // 전체 체결
+  CANCEL_REQUESTED = 5; // 취소 요청됨
+  CANCELED = 6;        // 취소됨
+  REJECTED = 7;        // 거부됨
+}
+
+// 클라이언트 → 서버: 신규 주문 요청
+message NewOrderRequest {
+  com.hts.server.core.protocol.SecureSession secure = 1;  // 세션 인증
+  string symbol = 2;           // 종목 코드
+  Side side = 3;               // 매수/매도
+  OrderType order_type = 4;    // 주문 타입
+  int64 quantity = 5;          // 수량
+  int64 price = 6;             // 가격 (시장가는 0)
+  TimeInForce time_in_force = 7; // 유효기간
+}
+
+// 클라이언트 → 서버: 주문 취소 요청
+message CancelOrderRequest {
+  com.hts.server.core.protocol.SecureSession secure = 1;  // 세션 인증
+  int64 order_id = 2;          // 주문 ID
+}
+
+// 서버 → 클라이언트: 주문 접수 응답
+message OrderResponse {
+  int64 order_id = 1;          // 주문 ID
+  OrderStatus status = 2;      // 주문 상태
+  string message = 3;          // 메시지
+  int64 timestamp = 4;         // 타임스탬프 (epoch millis)
+}
+
+// 서버 → 클라이언트: 체결 통보
+message ExecutionReport {
+  int64 order_id = 1;          // 주문 ID
+  OrderStatus status = 2;      // 주문 상태
+  int64 executed_quantity = 3; // 체결 수량
+  int64 executed_price = 4;    // 체결 가격
+  int64 remaining_quantity = 5; // 잔여 수량
+  int64 timestamp = 6;         // 타임스탬프 (epoch millis)
+}

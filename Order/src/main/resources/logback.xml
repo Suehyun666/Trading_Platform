@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console Appender: stdout only, minimal pattern -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- HH:mm:ss.SSS only (no date, no thread) for minimal I/O -->
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{20} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Async Appender: non-blocking, minimal overhead -->
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>4096</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="CONSOLE" />
+    </appender>
+
+    <!-- Package-specific loggers -->
+    <logger name="io.netty" level="WARN" />
+    <logger name="io.lettuce" level="WARN" />
+    <logger name="org.jooq" level="WARN" />
+    <logger name="com.zaxxer.hikari" level="WARN" />
+
+    <!-- Application loggers: INFO only (1 line per request) -->
+    <logger name="com.hts.order.service" level="INFO" />
+    <logger name="com.hts.order.repository" level="WARN" />
+    <logger name="com.hts.order.core.pipeline" level="INFO" />
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </root>
+</configuration>

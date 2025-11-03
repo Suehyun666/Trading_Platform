@@ -1,0 +1,14 @@
+syntax = "proto3";
+package com.hts.server.core.protocol;
+
+option java_package = "com.hts.order.core.protocol";
+option java_outer_classname = "CommonsProto";
+
+message SecureSession {
+  uint64 session_id = 1;
+}
+
+message ErrorMessage {
+  int32 code = 1;
+  string message = 2;
+}
